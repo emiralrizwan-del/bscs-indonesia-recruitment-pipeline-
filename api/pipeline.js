@@ -19,7 +19,7 @@ const EXIT_SHEETS = [
 
 /* ============ Column aliases (title drift tolerance across sheets) ============ */
 const ALIASES = {
-  pin:          ["PIN / CREW ID", "PIN", "CREW ID"],
+  palId:        ["PAL ID"],
   firstName:    ["FIRST NAME"],
   lastName:     ["LAST NAME"],
   dept:         ["DEPARTMENT"],
@@ -114,11 +114,11 @@ export default async function handler(req, res) {
         const get = extract(row);
         const name = [get("firstName"), get("lastName")].filter(Boolean).join(" ").trim();
         // skip completely empty rows
-        if (!get("pin") && !name) continue;
+        if (!get("palId") && !name) continue;
 
         if (kind === "pipeline") {
           candidates.push({
-            pin: get("pin"),
+            palId: get("palId"),
             name,
             dept: get("dept").toUpperCase(),
             pos: get("pos"),
@@ -133,7 +133,7 @@ export default async function handler(req, res) {
           });
         } else {
           exits.push({
-            pin: get("pin"),
+            palId: get("palId"),
             name,
             dept: get("dept").toUpperCase(),
             pos: get("pos"),

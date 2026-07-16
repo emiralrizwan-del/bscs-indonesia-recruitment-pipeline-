@@ -65,6 +65,7 @@
   .fconv .pct.good{color:var(--green)}
   .fconv .pct.warn{color:var(--amber)}
   .fconv .pct.bad{color:var(--red)}
+  .fconv .pct.pool{color:var(--navy)}
   .fconv .cl{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
   .search{flex:1;min-width:200px;position:relative}
@@ -79,7 +80,7 @@
   tbody tr:hover{background:#f7fafd}
   tbody tr:nth-child(even){background:#fafcfe}
   tbody tr:nth-child(even):hover{background:#f2f7fc}
-  .pin{font-family:'Courier New',monospace;font-weight:bold;color:var(--navy)}
+  .pal-id{font-family:'Courier New',monospace;font-weight:bold;color:var(--navy)}
   .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:bold;text-transform:uppercase;letter-spacing:.3px}
   .pill.pool{background:#e3eefb;color:var(--navy)}
   .pill.proc{background:#e0f2fb;color:#0a6fa8}
@@ -203,13 +204,13 @@
 <section class="view" id="funnel">
   <div class="card">
     <h3>Recruitment Funnel — Stage-to-Stage Conversion</h3>
-    <div class="sub">Conversion = current stage count ÷ previous stage count. Flags: <span style="color:var(--green);font-weight:bold">≥60%</span> · <span style="color:var(--amber);font-weight:bold">40–59%</span> · <span style="color:var(--red);font-weight:bold">&lt;40%</span></div>
+    <div class="sub">Conversion = current stage count ÷ previous stage count, for sequential flow-through stages only. Flags: <span style="color:var(--green);font-weight:bold">≥60%</span> · <span style="color:var(--amber);font-weight:bold">40–59%</span> · <span style="color:var(--red);font-weight:bold">&lt;40%</span>. <b>Assessed</b> and <b>Hotel Gap Pool</b> are accumulation pools (candidates build up over time, not a single pass-through) — shown as total headcount, not a %.</div>
     <div class="funnel" id="funnel-body"></div>
   </div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card">
       <h3>Conversion Rates Between Stages</h3>
-      <div class="sub">Stage-to-stage progression rate</div>
+      <div class="sub">Sequential flow-through stages only (excludes Assessed &amp; Hotel Gap Pool — see note below)</div>
       <canvas id="c-conv"></canvas>
     </div>
     <div class="card">
@@ -233,7 +234,7 @@
     <h3>Pool Members</h3>
     <div class="toolbar">
       <div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5b6b7a" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
-        <input id="pool-q" placeholder="Search by name, PIN, or position…" oninput="renderPool()"></div>
+        <input id="pool-q" placeholder="Search by name, PAL ID, or position…" oninput="renderPool()"></div>
       <select class="filt" id="pool-source" onchange="renderPool()">
         <option value="">All Sources</option>
         <option value="Assessed">Assessed</option>
@@ -254,7 +255,7 @@
     </div>
     <div style="overflow:auto;max-height:520px">
       <table id="pool-table"><thead><tr>
-        <th>PIN / Crew ID</th><th>Name</th><th>Department</th><th>Suggested Position</th>
+        <th>PAL ID</th><th>Name</th><th>Department</th><th>Suggested Position</th>
         <th>Cruise Exp</th><th>EAF</th><th>C1/D Exp Date</th><th>Schengen Exp Date</th><th>Source</th>
       </tr></thead><tbody></tbody></table>
     </div>
@@ -269,7 +270,7 @@
     <div class="sub">Filter by pipeline group and department. Combine filters + search freely.</div>
     <div class="toolbar">
       <div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5b6b7a" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
-        <input id="cand-q" placeholder="Search by name, PIN, or position…" oninput="renderCand()"></div>
+        <input id="cand-q" placeholder="Search by name, PAL ID, or position…" oninput="renderCand()"></div>
       <select class="filt" id="cand-group" onchange="renderCand()">
         <option value="">All Groups</option>
         <option value="pool">Recruitment Pool (Assessed + Hotel Gap)</option>
@@ -282,7 +283,7 @@
     <div class="deptgrid" id="cand-deptsummary"></div>
     <div style="overflow:auto;max-height:480px;margin-top:16px">
       <table id="cand-table"><thead><tr>
-        <th>PIN / Crew ID</th><th>Name</th><th>Group</th><th>Stage</th><th>Department</th>
+        <th>PAL ID</th><th>Name</th><th>Group</th><th>Stage</th><th>Department</th>
         <th>Suggested Position</th><th>Cruise Exp</th><th>Date Apply</th>
       </tr></thead><tbody></tbody></table>
     </div>
@@ -343,7 +344,7 @@
     </div>
     <div style="overflow:auto;max-height:440px">
       <table id="exit-table"><thead><tr>
-        <th>PIN / Crew ID</th><th>Name</th><th>Department</th><th>Position</th>
+        <th>PAL ID</th><th>Name</th><th>Department</th><th>Position</th>
         <th>Exit Type</th><th>Year</th>
       </tr></thead><tbody></tbody></table>
     </div>
@@ -380,6 +381,7 @@ let CANDS=[], EXITS=[], DEPTS=[];
 let charts={};
 const STAGE_ORDER=["Online Registration","Newly Registered","Screening","Ready to Assess","Assessed","Hotel Gap Pool"];
 const STAGE_COLORS=["#7ba3d4","#5b8fc9","#2f8ec4","#0a7abf","#0a5a9c","#00396F"];
+const STAGE_GROUP=["reg","reg","proc","proc","pool","pool"];
 const C={pool:"#00396F",proc:"#0a7abf",reg:"#5b8fc9",red:"#E2231A",green:"#1a9d5a",amber:"#e0930f"};
 
 /* ================= LOAD ================= */
@@ -476,14 +478,19 @@ function renderAll(){
   const fmax=Math.max(1,...stageCounts);
   STAGE_ORDER.forEach((s,i)=>{
     const v=stageCounts[i], w=Math.max(10,v/fmax*100);
-    let conv="—",cls="";
-    if(i>0&&stageCounts[i-1]>0){const p=v/stageCounts[i-1]*100;conv=p.toFixed(0)+"%";cls=p>=60?"good":p>=40?"warn":"bad";}
+    let conv="—",cls="",label=i===0?"entry":"from prev";
+    if(STAGE_GROUP[i]==="pool"){
+      conv=v; cls="pool"; label="total in pool";
+    } else if(i>0&&stageCounts[i-1]>0){
+      const p=v/stageCounts[i-1]*100;conv=p.toFixed(0)+"%";cls=p>=60?"good":p>=40?"warn":"bad";
+    }
     fb.innerHTML+=`<div class="fstage"><div class="fname">${s}</div>
       <div class="fbar-wrap"><div class="fbar" style="width:${w}%;background:${STAGE_COLORS[i]}">${v}</div></div>
-      <div class="fconv"><div class="pct ${cls}">${conv}</div><div class="cl">${i===0?'entry':'from prev'}</div></div></div>`;
+      <div class="fconv"><div class="pct ${cls}">${conv}</div><div class="cl">${label}</div></div></div>`;
   });
   const convLabels=[],convData=[];
   for(let i=1;i<STAGE_ORDER.length;i++){
+    if(STAGE_GROUP[i]==="pool")continue; // accumulation pool — not a flow-through conversion, excluded
     convLabels.push(STAGE_ORDER[i-1].split(" ")[0]+" → "+STAGE_ORDER[i].split(" ")[0]);
     convData.push(stageCounts[i-1]>0?+(stageCounts[i]/stageCounts[i-1]*100).toFixed(0):0);
   }
@@ -553,10 +560,10 @@ function renderPool(){
     if(visa==="sch-valid"&&!(d2&&d2>now))return false;
     if(visa==="sch-exp90"&&!(k2!==null&&k2>0&&k2<90))return false;
     if(visa==="none"&&((d1&&d1>now)||(d2&&d2>now)))return false;
-    if(q&&!((c.name||"").toLowerCase().includes(q)||(c.pin||"").toLowerCase().includes(q)||(c.pos||"").toLowerCase().includes(q)))return false;
+    if(q&&!((c.name||"").toLowerCase().includes(q)||(c.palId||"").toLowerCase().includes(q)||(c.pos||"").toLowerCase().includes(q)))return false;
     return true;});
   const tb=document.querySelector("#pool-table tbody");
-  tb.innerHTML=poolRows.slice(0,600).map(c=>`<tr><td class="pin">${esc(c.pin)}</td><td>${esc(c.name)}</td><td>${esc(c.dept)}</td><td>${esc(c.pos)}</td>
+  tb.innerHTML=poolRows.slice(0,600).map(c=>`<tr><td class="pal-id">${esc(c.palId)}</td><td>${esc(c.name)}</td><td>${esc(c.dept)}</td><td>${esc(c.pos)}</td>
     <td>${esc(c.cruiseExp)}</td><td>${eafPill(c.eaf)}</td><td>${docCell(c.c1dExp)}</td><td>${docCell(c.schExp)}</td>
     <td><span class="pill pool">${esc(c.stage)}</span></td></tr>`).join("");
   document.getElementById("pool-count").textContent=poolRows.length+" of "+pool.length+" pool members"+(poolRows.length>600?" (showing first 600)":"");
@@ -571,14 +578,14 @@ function renderCand(){
   candRows=CANDS.filter(c=>{
     if(grp&&c.group!==grp)return false;
     if(dept&&c.dept!==dept)return false;
-    if(q&&!((c.name||"").toLowerCase().includes(q)||(c.pin||"").toLowerCase().includes(q)||(c.pos||"").toLowerCase().includes(q)))return false;
+    if(q&&!((c.name||"").toLowerCase().includes(q)||(c.palId||"").toLowerCase().includes(q)||(c.pos||"").toLowerCase().includes(q)))return false;
     return true;});
   const ds=DEPTS.map(d=>({d,n:candRows.filter(r=>r.dept===d).length}));
   const mx=Math.max(1,...ds.map(x=>x.n));
   document.getElementById("cand-deptsummary").innerHTML=ds.map(x=>`<div class="deptchip"><div class="dn">${esc(x.d)}</div><div class="dc">${x.n}</div><div class="db"><i style="width:${x.n/mx*100}%"></i></div></div>`).join("");
   const gp={reg:'<span class="pill reg">Registered</span>',proc:'<span class="pill proc">On Process</span>',pool:'<span class="pill pool">Pool</span>'};
   const tb=document.querySelector("#cand-table tbody");
-  tb.innerHTML=candRows.slice(0,400).map(c=>`<tr><td class="pin">${esc(c.pin)}</td><td>${esc(c.name)}</td><td>${gp[c.group]||""}</td>
+  tb.innerHTML=candRows.slice(0,400).map(c=>`<tr><td class="pal-id">${esc(c.palId)}</td><td>${esc(c.name)}</td><td>${gp[c.group]||""}</td>
     <td>${esc(c.stage)}</td><td>${esc(c.dept)}</td><td>${esc(c.pos)}</td><td>${esc(c.cruiseExp)}</td><td>${esc(c.apply)}</td></tr>`).join("");
   document.getElementById("cand-count").textContent=candRows.length+" candidates"+(candRows.length>400?" (showing first 400)":"");
 }
@@ -592,10 +599,10 @@ function renderExit(){
   exitRows=EXITS.filter(e=>{
     if(t&&e.type!==t)return false;
     if(yv&&String(e.year)!==yv)return false;
-    if(q&&!((e.name||"").toLowerCase().includes(q)||(e.pin||"").toLowerCase().includes(q)||(e.pos||"").toLowerCase().includes(q)))return false;
+    if(q&&!((e.name||"").toLowerCase().includes(q)||(e.palId||"").toLowerCase().includes(q)||(e.pos||"").toLowerCase().includes(q)))return false;
     return true;});
   const tb=document.querySelector("#exit-table tbody");
-  tb.innerHTML=exitRows.slice(0,600).map(e=>`<tr><td class="pin">${esc(e.pin)}</td><td>${esc(e.name)}</td><td>${esc(e.dept)}</td><td>${esc(e.pos)}</td>
+  tb.innerHTML=exitRows.slice(0,600).map(e=>`<tr><td class="pal-id">${esc(e.palId)}</td><td>${esc(e.name)}</td><td>${esc(e.dept)}</td><td>${esc(e.pos)}</td>
     <td><span class="pill exit">${e.type==="nla"?"No Longer Avail":"Unsuccessful"}</span></td><td>${e.year}</td></tr>`).join("");
   document.getElementById("exit-count").textContent=exitRows.length+" of "+EXITS.length+" exit records"+(exitRows.length>600?" (showing first 600)":"");
 }
@@ -611,16 +618,16 @@ function exportCurrent(){
   const active=document.querySelector(".view.active").id;
   const stamp=new Date().toISOString().slice(0,10);
   if(active==="pool") csv(poolRows,
-    ["PIN","Name","Department","Suggested Position","Cruise Exp","EAF","C1D Exp Date","Schengen Exp Date","Source"],
-    c=>[c.pin,c.name,c.dept,c.pos,c.cruiseExp,c.eaf,c.c1dExp,c.schExp,c.stage],
+    ["PAL ID","Name","Department","Suggested Position","Cruise Exp","EAF","C1D Exp Date","Schengen Exp Date","Source"],
+    c=>[c.palId,c.name,c.dept,c.pos,c.cruiseExp,c.eaf,c.c1dExp,c.schExp,c.stage],
     `BSM_Recruitment_Pool_${stamp}.csv`);
   else if(active==="exit") csv(exitRows,
-    ["PIN","Name","Department","Position","Exit Type","Year"],
-    e=>[e.pin,e.name,e.dept,e.pos,e.type==="nla"?"No Longer Available":"Unsuccessful",e.year],
+    ["PAL ID","Name","Department","Position","Exit Type","Year"],
+    e=>[e.palId,e.name,e.dept,e.pos,e.type==="nla"?"No Longer Available":"Unsuccessful",e.year],
     `BSM_Pipeline_Exits_${stamp}.csv`);
   else csv(candRows.length?candRows:CANDS,
-    ["PIN","Name","Group","Stage","Department","Suggested Position","Cruise Exp","Date Apply"],
-    c=>[c.pin,c.name,c.group,c.stage,c.dept,c.pos,c.cruiseExp,c.apply],
+    ["PAL ID","Name","Group","Stage","Department","Suggested Position","Cruise Exp","Date Apply"],
+    c=>[c.palId,c.name,c.group,c.stage,c.dept,c.pos,c.cruiseExp,c.apply],
     `BSM_Candidates_${stamp}.csv`);
 }
 
