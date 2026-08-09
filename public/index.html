@@ -290,17 +290,13 @@
       <select class="filt" id="cand-dept" onchange="renderCand()"><option value="">All Departments</option></select>
       <select class="filt" id="cand-c1d" onchange="renderCand()">
         <option value="">All C1/D Visa</option>
-        <option value="VALID">C1/D — Valid</option>
-        <option value="NOT VALID">C1/D — Not Valid</option>
-        <option value="IN PROGRESS">C1/D — In Progress</option>
-        <option value="DON'T HAVE">C1/D — Don't Have</option>
+        <option value="HAS">C1/D — Has Visa (exp date filled)</option>
+        <option value="NONE">C1/D — No Visa (empty)</option>
       </select>
       <select class="filt" id="cand-sch" onchange="renderCand()">
         <option value="">All Schengen Visa</option>
-        <option value="VALID">Schengen — Valid</option>
-        <option value="NOT VALID">Schengen — Not Valid</option>
-        <option value="IN PROGRESS">Schengen — In Progress</option>
-        <option value="DON'T HAVE">Schengen — Don't Have</option>
+        <option value="HAS">Schengen — Has Visa (exp date filled)</option>
+        <option value="NONE">Schengen — No Visa (empty)</option>
       </select>
       <button class="btn btn-red" onclick="exportCurrent()" style="padding:9px 13px">⤓ Export</button>
     </div>
@@ -308,8 +304,8 @@
     <div style="overflow:auto;max-height:480px;margin-top:16px">
       <table id="cand-table"><thead><tr>
         <th>PAL ID</th><th>Name</th><th>Group</th><th>Stage</th><th>Department</th>
-        <th>Position Apply</th><th>C1/D Visa</th><th>C1/D Exp Date</th>
-        <th>Schengen Visa</th><th>Schengen Exp Date</th><th>Cruise Exp</th><th>Date Apply</th>
+        <th>Position Apply</th><th>C1/D Exp Date</th><th>Schengen Exp Date</th>
+        <th>Cruise Exp</th><th>Date Apply</th>
       </tr></thead><tbody></tbody></table>
     </div>
     <div class="toolbar" style="margin:12px 0 0"><span class="count-note" id="cand-count"></span></div>
@@ -617,8 +613,12 @@ function renderCand(){
   candRows=CANDS.filter(c=>{
     if(stage&&c.stage!==stage)return false;
     if(dept&&c.dept!==dept)return false;
-    if(c1d&&(c.c1dVisa||"")!==c1d)return false;
-    if(sch&&(c.schVisa||"")!==sch)return false;
+    const hasC1d=String(c.c1dExp||"").trim()!=="";
+    const hasSch=String(c.schExp||"").trim()!=="";
+    if(c1d==="HAS"&&!hasC1d)return false;
+    if(c1d==="NONE"&&hasC1d)return false;
+    if(sch==="HAS"&&!hasSch)return false;
+    if(sch==="NONE"&&hasSch)return false;
     if(q&&!((c.name||"").toLowerCase().includes(q)||(c.palId||"").toLowerCase().includes(q)
         ||(c.posApply||"").toLowerCase().includes(q)||(c.pos||"").toLowerCase().includes(q)))return false;
     return true;});
@@ -627,8 +627,7 @@ function renderCand(){
   const tb=document.querySelector("#cand-table tbody");
   tb.innerHTML=candRows.slice(0,400).map(c=>`<tr><td class="pal-id">${esc(c.palId)}</td><td>${esc(c.name)}</td><td>${gp[c.group]||""}</td>
     <td>${esc(c.stage)}</td><td>${esc(c.dept)}</td><td>${esc(c.posApply)||'<span class="doc-none">—</span>'}</td>
-    <td>${visaPill(c.c1dVisa)}</td><td>${docCell(c.c1dExp)}</td>
-    <td>${visaPill(c.schVisa)}</td><td>${docCell(c.schExp)}</td>
+    <td>${docCell(c.c1dExp)}</td><td>${docCell(c.schExp)}</td>
     <td>${esc(c.cruiseExp)}</td><td>${esc(c.apply)}</td></tr>`).join("");
   document.getElementById("cand-count").textContent=candRows.length+" candidates"+(candRows.length>400?" (showing first 400)":"");
 }
@@ -670,9 +669,9 @@ function exportCurrent(){
     `BSM_Pipeline_Exits_${stamp}.csv`);
   else csv(candRows.length?candRows:CANDS,
     ["PAL ID","Name","Group","Stage","Department","Position Apply","Suggested Position",
-     "C1D Visa","C1D Exp Date","Schengen Visa","Schengen Exp Date","Cruise Exp","Date Apply"],
+     "C1D Exp Date","Schengen Exp Date","Cruise Exp","Date Apply"],
     c=>[c.palId,c.name,c.group,c.stage,c.dept,c.posApply,c.pos,
-        c.c1dVisa,c.c1dExp,c.schVisa,c.schExp,c.cruiseExp,c.apply],
+        c.c1dExp,c.schExp,c.cruiseExp,c.apply],
     `BSM_Candidates_${stamp}.csv`);
 }
 
