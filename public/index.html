@@ -89,6 +89,10 @@
   .pill.eaf-ok{background:#e2f5ea;color:var(--green)}
   .pill.eaf-pend{background:#fdf3dc;color:#9a6b00}
   .pill.eaf-na{background:#eef1f4;color:var(--muted)}
+  .pill.visa-valid{background:#e2f5ea;color:var(--green)}
+  .pill.visa-invalid{background:var(--red-soft);color:var(--red)}
+  .pill.visa-prog{background:#fdf3dc;color:#9a6b00}
+  .pill.visa-none{background:#eef1f4;color:var(--muted)}
   .doc-ok{color:var(--green);font-weight:bold}
   .doc-exp{color:var(--red);font-weight:bold}
   .doc-soon{color:var(--amber);font-weight:bold}
@@ -230,6 +234,11 @@
     <div class="stat pool"><div class="lbl">C1/D Valid (by exp)</div><div class="val" id="p-c1d" style="font-size:26px">—</div><div class="meta">exp date in the future</div></div>
     <div class="stat exit"><div class="lbl">Visa Expiring ≤90d</div><div class="val" id="p-exp" style="font-size:26px">—</div><div class="meta">C1/D or Schengen</div></div>
   </div>
+  <div class="card" style="margin-bottom:16px">
+    <h3>Pool by Department</h3>
+    <div class="sub">Live count per department across Assessed + Hotel Gap Pool. Printshop is counted within Administration.</div>
+    <div class="deptgrid" id="pool-deptsummary"></div>
+  </div>
   <div class="card">
     <h3>Pool Members</h3>
     <div class="toolbar">
@@ -267,24 +276,40 @@
 <section class="view" id="candidates">
   <div class="card">
     <h3>Candidate Breakdown</h3>
-    <div class="sub">Filter by pipeline group and department. Combine filters + search freely.</div>
+    <div class="sub">Filter by stage, department and visa status. Combine filters + search freely. Printshop is counted within Administration.</div>
     <div class="toolbar">
       <div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5b6b7a" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
         <input id="cand-q" placeholder="Search by name, PAL ID, or position…" oninput="renderCand()"></div>
-      <select class="filt" id="cand-group" onchange="renderCand()">
-        <option value="">All Groups</option>
-        <option value="pool">Recruitment Pool (Assessed + Hotel Gap)</option>
-        <option value="proc">On Process (Screening + Ready to Assess)</option>
-        <option value="reg">Registered (Online + Newly Registered)</option>
+      <select class="filt" id="cand-stage" onchange="renderCand()">
+        <option value="">All Stages</option>
+        <option value="Online Registration">Online Registration</option>
+        <option value="Newly Registered">Newly Registered</option>
+        <option value="Screening">Screening</option>
+        <option value="Ready to Assess">Ready to Assess</option>
       </select>
       <select class="filt" id="cand-dept" onchange="renderCand()"><option value="">All Departments</option></select>
+      <select class="filt" id="cand-c1d" onchange="renderCand()">
+        <option value="">All C1/D Visa</option>
+        <option value="VALID">C1/D — Valid</option>
+        <option value="NOT VALID">C1/D — Not Valid</option>
+        <option value="IN PROGRESS">C1/D — In Progress</option>
+        <option value="DON'T HAVE">C1/D — Don't Have</option>
+      </select>
+      <select class="filt" id="cand-sch" onchange="renderCand()">
+        <option value="">All Schengen Visa</option>
+        <option value="VALID">Schengen — Valid</option>
+        <option value="NOT VALID">Schengen — Not Valid</option>
+        <option value="IN PROGRESS">Schengen — In Progress</option>
+        <option value="DON'T HAVE">Schengen — Don't Have</option>
+      </select>
       <button class="btn btn-red" onclick="exportCurrent()" style="padding:9px 13px">⤓ Export</button>
     </div>
     <div class="deptgrid" id="cand-deptsummary"></div>
     <div style="overflow:auto;max-height:480px;margin-top:16px">
       <table id="cand-table"><thead><tr>
         <th>PAL ID</th><th>Name</th><th>Group</th><th>Stage</th><th>Department</th>
-        <th>Suggested Position</th><th>Cruise Exp</th><th>Date Apply</th>
+        <th>Position Apply</th><th>C1/D Visa</th><th>C1/D Exp Date</th>
+        <th>Schengen Visa</th><th>Schengen Exp Date</th><th>Cruise Exp</th><th>Date Apply</th>
       </tr></thead><tbody></tbody></table>
     </div>
     <div class="toolbar" style="margin:12px 0 0"><span class="count-note" id="cand-count"></span></div>
@@ -421,6 +446,17 @@ function docCell(s){ const d=parseD(s);
 function eafPill(v){ if(!v) return '<span class="doc-none">—</span>';
   const cls=(v==="EAF RECEIVED"||v==="PROPOSE DOCS - COMPLETE")?"eaf-ok":(v==="N/A")?"eaf-na":"eaf-pend";
   return '<span class="pill '+cls+'">'+esc(v)+'</span>'; }
+function visaPill(v){ if(!v) return '<span class="doc-none">—</span>';
+  const u=String(v).toUpperCase();
+  const cls=u==="VALID"?"visa-valid":u==="NOT VALID"?"visa-invalid":u==="IN PROGRESS"?"visa-prog":"visa-none";
+  return '<span class="pill '+cls+'">'+esc(v)+'</span>'; }
+function deptChips(rows,targetId){
+  const ds=DEPTS.map(d=>({d,n:rows.filter(r=>r.dept===d).length}));
+  const mx=Math.max(1,...ds.map(x=>x.n));
+  document.getElementById(targetId).innerHTML=ds.map(x=>
+    `<div class="deptchip"><div class="dn">${esc(x.d)}</div><div class="dc">${x.n}</div>
+     <div class="db"><i style="width:${x.n/mx*100}%"></i></div></div>`).join("");
+}
 function esc(s){ return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
 function fillDeptSelects(){
   ["pool-dept","cand-dept"].forEach(id=>{
@@ -562,6 +598,7 @@ function renderPool(){
     if(visa==="none"&&((d1&&d1>now)||(d2&&d2>now)))return false;
     if(q&&!((c.name||"").toLowerCase().includes(q)||(c.palId||"").toLowerCase().includes(q)||(c.pos||"").toLowerCase().includes(q)))return false;
     return true;});
+  deptChips(poolRows,"pool-deptsummary");
   const tb=document.querySelector("#pool-table tbody");
   tb.innerHTML=poolRows.slice(0,600).map(c=>`<tr><td class="pal-id">${esc(c.palId)}</td><td>${esc(c.name)}</td><td>${esc(c.dept)}</td><td>${esc(c.pos)}</td>
     <td>${esc(c.cruiseExp)}</td><td>${eafPill(c.eaf)}</td><td>${docCell(c.c1dExp)}</td><td>${docCell(c.schExp)}</td>
@@ -573,20 +610,26 @@ function renderPool(){
 let candRows=[];
 function renderCand(){
   const q=document.getElementById("cand-q").value.toLowerCase();
-  const grp=document.getElementById("cand-group").value;
+  const stage=document.getElementById("cand-stage").value;
   const dept=document.getElementById("cand-dept").value;
+  const c1d=document.getElementById("cand-c1d").value;
+  const sch=document.getElementById("cand-sch").value;
   candRows=CANDS.filter(c=>{
-    if(grp&&c.group!==grp)return false;
+    if(stage&&c.stage!==stage)return false;
     if(dept&&c.dept!==dept)return false;
-    if(q&&!((c.name||"").toLowerCase().includes(q)||(c.palId||"").toLowerCase().includes(q)||(c.pos||"").toLowerCase().includes(q)))return false;
+    if(c1d&&(c.c1dVisa||"")!==c1d)return false;
+    if(sch&&(c.schVisa||"")!==sch)return false;
+    if(q&&!((c.name||"").toLowerCase().includes(q)||(c.palId||"").toLowerCase().includes(q)
+        ||(c.posApply||"").toLowerCase().includes(q)||(c.pos||"").toLowerCase().includes(q)))return false;
     return true;});
-  const ds=DEPTS.map(d=>({d,n:candRows.filter(r=>r.dept===d).length}));
-  const mx=Math.max(1,...ds.map(x=>x.n));
-  document.getElementById("cand-deptsummary").innerHTML=ds.map(x=>`<div class="deptchip"><div class="dn">${esc(x.d)}</div><div class="dc">${x.n}</div><div class="db"><i style="width:${x.n/mx*100}%"></i></div></div>`).join("");
+  deptChips(candRows,"cand-deptsummary");
   const gp={reg:'<span class="pill reg">Registered</span>',proc:'<span class="pill proc">On Process</span>',pool:'<span class="pill pool">Pool</span>'};
   const tb=document.querySelector("#cand-table tbody");
   tb.innerHTML=candRows.slice(0,400).map(c=>`<tr><td class="pal-id">${esc(c.palId)}</td><td>${esc(c.name)}</td><td>${gp[c.group]||""}</td>
-    <td>${esc(c.stage)}</td><td>${esc(c.dept)}</td><td>${esc(c.pos)}</td><td>${esc(c.cruiseExp)}</td><td>${esc(c.apply)}</td></tr>`).join("");
+    <td>${esc(c.stage)}</td><td>${esc(c.dept)}</td><td>${esc(c.posApply)||'<span class="doc-none">—</span>'}</td>
+    <td>${visaPill(c.c1dVisa)}</td><td>${docCell(c.c1dExp)}</td>
+    <td>${visaPill(c.schVisa)}</td><td>${docCell(c.schExp)}</td>
+    <td>${esc(c.cruiseExp)}</td><td>${esc(c.apply)}</td></tr>`).join("");
   document.getElementById("cand-count").textContent=candRows.length+" candidates"+(candRows.length>400?" (showing first 400)":"");
 }
 
@@ -626,8 +669,10 @@ function exportCurrent(){
     e=>[e.palId,e.name,e.dept,e.pos,e.type==="nla"?"No Longer Available":"Unsuccessful",e.year],
     `BSM_Pipeline_Exits_${stamp}.csv`);
   else csv(candRows.length?candRows:CANDS,
-    ["PAL ID","Name","Group","Stage","Department","Suggested Position","Cruise Exp","Date Apply"],
-    c=>[c.palId,c.name,c.group,c.stage,c.dept,c.pos,c.cruiseExp,c.apply],
+    ["PAL ID","Name","Group","Stage","Department","Position Apply","Suggested Position",
+     "C1D Visa","C1D Exp Date","Schengen Visa","Schengen Exp Date","Cruise Exp","Date Apply"],
+    c=>[c.palId,c.name,c.group,c.stage,c.dept,c.posApply,c.pos,
+        c.c1dVisa,c.c1dExp,c.schVisa,c.schExp,c.cruiseExp,c.apply],
     `BSM_Candidates_${stamp}.csv`);
 }
 
