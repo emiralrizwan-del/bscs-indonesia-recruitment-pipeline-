@@ -24,13 +24,28 @@ const ALIASES = {
   lastName:     ["LAST NAME"],
   dept:         ["DEPARTMENT"],
   pos:          ["SUGGESTED POSITION", "SUGESTED POSITION", "POSITION"],
+  posApply:     ["POSITION APPLY", "POSITION APPLIED", "APPLY POSITION"],
   cruiseExp:    ["CRUISE EXPERIENCE"],
   eaf:          ["EAF"],
+  c1dVisa:      ["C1/D VISA", "C1D VISA"],
+  schVisa:      ["SCHENGEN VISA"],
   c1dExp:       ["C1/D EXP DATE"],
   schExp:       ["SCHENGEN EXP DATE"],
   apply:        ["DATE APPLY", "APPLY DATE"],
   assessedDate: ["ASSESSED DATE"],
 };
+
+/* ============ Department normalisation ============
+   Single source of truth. Add future merges here only — every section of the
+   dashboard (Overview, Pool, Candidate Breakdown, Exits) reads from this. */
+const DEPT_MERGE = {
+  "PRINTSHOP": "ADMINISTRATION",
+};
+
+function normalizeDept(raw) {
+  const d = (raw || "").toUpperCase().trim();
+  return DEPT_MERGE[d] || d;
+}
 
 function normalize(t) {
   return (t || "").toLowerCase().replace(/[\u2013\u2014-]/g, "-").replace(/\s+/g, " ").trim();
@@ -120,10 +135,13 @@ export default async function handler(req, res) {
           candidates.push({
             palId: get("palId"),
             name,
-            dept: get("dept").toUpperCase(),
+            dept: normalizeDept(get("dept")),
             pos: get("pos"),
+            posApply: get("posApply"),
             cruiseExp: get("cruiseExp"),
             eaf: meta.group === "pool" ? get("eaf") : "",
+            c1dVisa: get("c1dVisa").toUpperCase(),
+            schVisa: get("schVisa").toUpperCase(),
             c1dExp: get("c1dExp"),
             schExp: get("schExp"),
             apply: get("apply"),
@@ -135,7 +153,7 @@ export default async function handler(req, res) {
           exits.push({
             palId: get("palId"),
             name,
-            dept: get("dept").toUpperCase(),
+            dept: normalizeDept(get("dept")),
             pos: get("pos"),
             apply: get("apply"),
             type: meta.type,
