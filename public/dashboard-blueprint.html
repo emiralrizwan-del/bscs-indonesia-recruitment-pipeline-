@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BSCS Recruitment Pipeline — Dashboard</title>
+<style>
+/* ---------- BSM tokens (do not add new colours) ---------- */
+:root{
+  --navy:#00396F; --navy-2:#0a4d8c; --navy-3:#4b82c2; --navy-4:#5b8fc9; --navy-5:#9dc0e2;
+  --red:#E2231A; --green:#1a9d5a; --amber:#e0930f;
+  --ink:#1a2733; --muted:#5b6b7a; --line:#e2e8ee; --line-2:#eef2f6; --bg:#f4f7fa;
+  --green-bg:#e2f5ea; --amber-bg:#fdf3e0; --red-bg:#fbe9e8; --navy-bg:#eef4fb;
+  --r:12px; --shadow:0 1px 3px rgba(0,57,111,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--navy-2);text-decoration:none}
+a:hover{color:var(--navy);text-decoration:underline}
+
+/* ---------- chrome ---------- */
+.topbar{background:var(--navy);height:62px;padding:0 22px;display:flex;align-items:center;gap:14px}
+.logo{background:#fff;border-radius:6px;padding:5px 10px;display:flex;align-items:center}
+.logo img{height:24px;display:block}
+.topbar h1{font:700 14px Arial;color:#fff;margin:0}
+.topbar .sub{font:11px Arial;color:rgba(255,255,255,.62)}
+.topbar .right{margin-left:auto;display:flex;align-items:center;gap:14px;font:11px Arial;color:rgba(255,255,255,.62)}
+.tabbar{background:#fff;border-bottom:1px solid var(--line);padding:0 22px;display:flex;gap:4px;overflow-x:auto}
+.tab{appearance:none;border:0;background:none;cursor:pointer;padding:14px 14px 12px;font:700 12.5px Arial;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--navy);border-bottom-color:var(--red)}
+main{padding:20px 22px 30px;display:flex;flex-direction:column;gap:14px;max-width:1400px}
+.panel[hidden]{display:none}
+
+/* ---------- building blocks ---------- */
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px 20px}
+.card.flush{padding:0;overflow:hidden}
+.grid{display:grid;gap:12px}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g2a{grid-template-columns:1.15fr 1fr}
+.g21{grid-template-columns:1.6fr 1fr}
+.stack{display:flex;flex-direction:column;gap:12px}
+.kpi{padding:15px 16px}
+.kpi.alert{padding-left:19px;position:relative;overflow:hidden}
+.kpi.alert:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)}
+.eyebrow{font:10.5px Arial;color:var(--muted);letter-spacing:.5px;text-transform:uppercase}
+.kpi .val{font:700 26px Arial;margin-top:6px}
+.kpi .val.sm{font-size:22px}
+.kpi .foot{font:11px Arial;color:var(--muted);margin-top:3px}
+.up{color:var(--green)} .watch{color:var(--amber)} .down{color:var(--red)}
+.ttl{display:flex;align-items:baseline;gap:9px}
+.ttl:before{content:"";width:4px;height:18px;background:var(--red);border-radius:3px;display:block}
+.ttl h2{font:700 15px Arial;color:var(--navy);margin:0}
+.sect{font:700 13px Arial;color:var(--navy);letter-spacing:.6px;text-transform:uppercase}
+.hint{font:11.5px Arial;color:var(--muted);margin:6px 0 0}
+.note{margin-top:15px;padding-top:13px;border-top:1px solid var(--line-2);font:11.5px/1.5 Arial;color:var(--muted)}
+.pill{display:inline-block;padding:3px 9px;border-radius:20px;font:700 10.5px Arial}
+.pill.g{background:var(--green-bg);color:var(--green)}
+.pill.a{background:var(--amber-bg);color:var(--amber)}
+.pill.r{background:var(--red-bg);color:var(--red)}
+.pill.n{background:var(--line-2);color:var(--muted)}
+.legend{display:flex;align-items:center;gap:18px;margin:8px 0 0 13px;font:11px Arial;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:2px;display:block}
+.dash{width:14px;height:0;border-top:2px dashed var(--amber);display:block}
+
+/* stepped funnel (option A) */
+.funnel{margin-top:18px}
+.fstep{display:grid;grid-template-columns:168px 1fr 62px;align-items:center;gap:14px;padding:11px 0}
+.fstep .lbl{font:700 12.5px Arial}
+.fstep .track{height:26px;background:var(--line-2);border-radius:4px}
+.fstep .fill{height:100%;border-radius:4px}
+.fstep .n{font:700 13px Arial;text-align:right}
+.fgate{display:grid;grid-template-columns:168px 1fr 62px;gap:14px}
+.fgate .g{display:flex;align-items:center;gap:8px;padding:2px 0}
+.fgate .g:before{content:"";width:1px;height:14px;background:#cfdae5;margin-left:12px;display:block}
+.fgate .g small{font:10.5px Arial;color:var(--muted)}
+.fstep.pool .lbl{color:var(--navy)}
+.fstep.pool .lbl em{font:400 10.5px Arial;color:var(--muted);font-style:normal}
+
+/* bar rows */
+.row{display:grid;grid-template-columns:140px 1fr 46px;align-items:center;gap:12px}
+.row .name{font:11.5px Arial}
+.row .track{height:8px;background:var(--line-2);border-radius:4px}
+.row .fill{height:100%;border-radius:4px;background:var(--navy-2)}
+.row .n{font:700 11.5px Arial;text-align:right}
+.tile{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border-radius:8px;font:12px Arial}
+.tile b{font:700 12.5px Arial}
+.tile.on{background:var(--navy-bg);color:var(--navy)}
+
+/* column chart */
+.chart{margin-top:18px;display:flex;align-items:flex-end;gap:10px;height:196px;border-bottom:1px solid var(--line);position:relative}
+.capline{position:absolute;left:0;right:0;bottom:88px;border-top:2px dashed var(--amber)}
+.col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}
+.col .v{font:700 10.5px Arial}
+.col .pair{width:100%;display:flex;gap:3px;align-items:flex-end}
+.col .pair i{flex:1;border-radius:4px 4px 0 0;background:var(--navy-2);display:block}
+.col .pair i.b{background:var(--navy-5)}
+.col.now .v{color:var(--navy)}
+.col.now .pair i{background:var(--navy)}
+.xaxis{display:flex;gap:10px;margin-top:9px}
+.xaxis span{flex:1;text-align:center;font:10.5px Arial;color:var(--muted)}
+.xaxis span.now{font-weight:700;color:var(--navy)}
+
+/* attention panel */
+.attn{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.attn-item{display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:9px;background:#fff}
+.attn-item.crit{border-left-color:var(--red)}
+.attn-item .c{font:700 18px Arial;min-width:38px;text-align:right}
+.attn-item .t{font:12px Arial}
+.attn-item .t small{display:block;font:11px Arial;color:var(--muted);margin-top:2px}
+.attn-item .go{margin-left:auto;font:700 11px Arial;color:var(--navy-2);white-space:nowrap}
+
+/* stage-exit meters */
+.meter .head{display:flex;justify-content:space-between;font:11.5px Arial;margin-bottom:6px}
+.meter .head b{font-weight:700}
+.meter .head span.of{font-weight:400;color:var(--muted)}
+.meter .track{height:8px;background:var(--line-2);border-radius:4px}
+.meter .fill{height:100%;border-radius:4px;background:var(--red)}
+
+/* tables */
+.thead{padding:16px 20px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.chips{display:flex;gap:6px;margin-left:8px;flex-wrap:wrap}
+.chip{padding:4px 10px;border-radius:20px;background:var(--bg);font:11px Arial;color:var(--muted);cursor:pointer}
+.chip.on{background:var(--navy);color:#fff;font-weight:700}
+.count{margin-left:auto;font:11px Arial;color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;padding:9px 12px;font:700 10.5px Arial;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;background:var(--bg)}
+thead th:first-child,tbody td:first-child{padding-left:20px}
+thead th:last-child,tbody td:last-child{padding-right:20px}
+tbody tr{border-top:1px solid #f0f3f7}
+tbody td{padding:11px 12px;font:12px Arial}
+tbody td.id{color:var(--muted)}
+tbody td.nm{font-weight:700}
+.tfoot{padding:13px 20px;background:var(--bg);border-top:1px solid var(--line-2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tfoot .info{font:11.5px Arial;color:var(--muted)}
+.btn{padding:6px 12px;border:1px solid #d7e0ea;border-radius:7px;background:#fff;font:11.5px Arial;color:var(--muted);cursor:pointer}
+.btn.primary{border-color:var(--navy);background:var(--navy);color:#fff;font-weight:700}
+.stub{padding:40px 20px;text-align:center;font:12px Arial;color:var(--muted)}
+
+@media (max-width:980px){
+  .g4,.g2,.g2a,.g21{grid-template-columns:1fr}
+  .fstep,.fgate{grid-template-columns:120px 1fr 52px}
+  main{padding:16px 14px 26px}
+  .topbar{height:auto;padding:12px 14px;flex-wrap:wrap}
+  .table-wrap{overflow-x:auto}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo"><img src="assets/bsm-logo.png" alt="BSM Cruise Services"></div>
+  <div>
+    <h1>Recruitment Pipeline</h1>
+    <div class="sub">BSCS Indonesia · FY 2026</div>
+  </div>
+  <div class="right">
+    <span>Synced 14:32 · 10 sheets</span>
+    <button class="btn">Refresh</button>
+  </div>
+</header>
+
+<nav class="tabbar" role="tablist">
+  <button class="tab" role="tab" aria-selected="true" data-panel="overview">Overview</button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="funnel">Funnel &amp; Conversion</button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="pool">Recruitment Pool</button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="breakdown">Candidate Breakdown</button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="trend">Registration Trend</button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="exits">Pipeline Exits</button>
+</nav>
+
+<main>
+
+<!-- ============ OVERVIEW ============ -->
+<section class="panel" id="overview">
+  <div class="grid g4">
+    <div class="card kpi"><div class="eyebrow">Total registrations</div><div class="val num">1,284</div><div class="foot">12 months · 107 / month</div></div>
+    <div class="card kpi"><div class="eyebrow">Active pipeline</div><div class="val num">1,141</div><div class="foot">Excludes exits</div></div>
+    <div class="card kpi"><div class="eyebrow">Assessed pool</div><div class="val num">214</div><div class="foot">+ 97 in Hotel Gap Pool</div></div>
+    <div class="card kpi alert"><div class="eyebrow">Exits 2026 YTD</div><div class="val num">183</div><div class="foot">14.3% of registrations</div></div>
+  </div>
+
+  <div class="grid g21">
+    <!-- funnel option A: stepped bars -->
+    <div class="card">
+      <div class="ttl"><h2>Pipeline funnel</h2></div>
+      <p class="hint">Sequential stages with gate conversion. Assessed and Hotel Gap Pool accumulate over time, so they read as pools.</p>
+      <div class="funnel">
+        <div class="fstep"><div class="lbl">Online Registration</div><div class="track"><div class="fill" style="width:100%;background:var(--navy-4)"></div></div><div class="n num">1,284</div></div>
+        <div class="fgate"><div></div><div class="g"><span class="pill g">47.7% conversion</span><small>672 did not progress</small></div><div></div></div>
+        <div class="fstep"><div class="lbl">Newly Registered</div><div class="track"><div class="fill" style="width:47.7%;background:var(--navy-3)"></div></div><div class="n num">612</div></div>
+        <div class="fgate"><div></div><div class="g"><span class="pill g">55.7% conversion</span><small>271 did not progress</small></div><div></div></div>
+        <div class="fstep"><div class="lbl">Screening</div><div class="track"><div class="fill" style="width:26.6%;background:#0a7abf"></div></div><div class="n num">341</div></div>
+        <div class="fgate"><div></div><div class="g"><span class="pill a">55.1% conversion</span><small>tightest gate — 153 aged &gt;30d</small></div><div></div></div>
+        <div class="fstep" style="border-bottom:1px solid var(--line-2)"><div class="lbl">Ready to Assess</div><div class="track"><div class="fill" style="width:14.6%;background:var(--navy-2)"></div></div><div class="n num">188</div></div>
+        <div class="fstep pool" style="padding-top:13px"><div class="lbl">Assessed <em>pool</em></div><div class="track"><div class="fill" style="width:16.7%;background:var(--navy)"></div></div><div class="n num">214</div></div>
+        <div class="fstep pool" style="padding-top:0"><div class="lbl">Hotel Gap Pool <em>pool</em></div><div class="track"><div class="fill" style="width:7.6%;background:var(--navy);opacity:.62"></div></div><div class="n num">97</div></div>
+      </div>
+      <p class="note">Tightest gate this month: <b style="color:var(--ink)">Screening → Ready to Assess (55.1%)</b>. Median time in Screening is 31 days, 2.2× the pipeline median.</p>
+    </div>
+
+    <!-- needs attention panel -->
+    <div class="card">
+      <div class="sect">Needs attention</div>
+      <p class="hint" style="margin:4px 0 0">Rules run on every sync. Amber is a deadline, red is already blocking.</p>
+      <div class="attn">
+        <div class="attn-item crit"><div class="c down num">18</div><div class="t">Visa expiring ≤ 30 days<small>C1/D or Schengen · re-apply window closing</small></div><div class="go">Open list →</div></div>
+        <div class="attn-item"><div class="c watch num">41</div><div class="t">Visa expiring ≤ 90 days<small>Plan renewal before assignment</small></div><div class="go">Open list →</div></div>
+        <div class="attn-item"><div class="c watch num">27</div><div class="t">EAF pending<small>Blocks submission to client</small></div><div class="go">Open list →</div></div>
+        <div class="attn-item crit"><div class="c down num">153</div><div class="t">Screening aged &gt; 30 days<small>No stage movement since last review</small></div><div class="go">Open list →</div></div>
+        <div class="attn-item"><div class="c watch num">12</div><div class="t">Medical expiring ≤ 60 days<small>Renewal needed pre-embarkation</small></div><div class="go">Open list →</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2a">
+    <div class="card">
+      <div class="sect">Department distribution</div>
+      <p class="hint" style="margin:3px 0 16px">Assessed + Hotel Gap Pool · Printshop counted within Administration</p>
+      <div class="stack">
+        <div class="row"><div class="name">F&amp;B Service</div><div class="track"><div class="fill" style="width:100%;background:var(--navy)"></div></div><div class="n num">84</div></div>
+        <div class="row"><div class="name">Housekeeping</div><div class="track"><div class="fill" style="width:76%"></div></div><div class="n num">64</div></div>
+        <div class="row"><div class="name">Galley</div><div class="track"><div class="fill" style="width:62%;background:var(--navy-3)"></div></div><div class="n num">52</div></div>
+        <div class="row"><div class="name">Bar</div><div class="track"><div class="fill" style="width:45%;background:var(--navy-3)"></div></div><div class="n num">38</div></div>
+        <div class="row"><div class="name">Administration</div><div class="track"><div class="fill" style="width:33%;background:var(--navy-4)"></div></div><div class="n num">28</div></div>
+        <div class="row"><div class="name">Deck / Technical</div><div class="track"><div class="fill" style="width:26%;background:var(--navy-4)"></div></div><div class="n num">22</div></div>
+        <div class="row"><div class="name">Retail</div><div class="track"><div class="fill" style="width:27%;background:var(--navy-5)"></div></div><div class="n num">23</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sect">This month</div>
+      <p class="hint" style="margin:3px 0 14px">From DATE APPLY and ASSESSED DATE</p>
+      <div class="grid g2">
+        <div class="tile" style="display:block"><div class="eyebrow">New registrations</div><div class="val num" style="font:700 24px Arial">148</div><div class="foot up" style="font:11px Arial">+22 vs last month</div></div>
+        <div class="tile" style="display:block"><div class="eyebrow">Assessed</div><div class="val num" style="font:700 24px Arial">62</div><div class="foot watch" style="font:11px Arial">42% of intake</div></div>
+        <div class="tile" style="display:block"><div class="eyebrow">Ready to submit</div><div class="val num" style="font:700 24px Arial">73</div><div class="foot" style="font:11px Arial;color:var(--muted)">Docs complete</div></div>
+        <div class="tile" style="display:block;background:var(--red-bg)"><div class="eyebrow">Exits</div><div class="val num" style="font:700 24px Arial">21</div><div class="foot up" style="font:11px Arial">−6 vs last month</div></div>
+      </div>
+      <p class="note">Intake is running above assessment capacity (70 / month) — see Registration Trend.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ REGISTRATION TREND ============ -->
+<section class="panel" id="trend" hidden>
+  <div class="grid g4">
+    <div class="card kpi"><div class="eyebrow">Registrations, 12 mo</div><div class="val num">1,284</div><div class="foot">107 / month average</div></div>
+    <div class="card kpi"><div class="eyebrow">This month</div><div class="val num">148</div><div class="foot up">+22 vs last month</div></div>
+    <div class="card kpi"><div class="eyebrow">Assessed this month</div><div class="val num">62</div><div class="foot watch">42% of intake absorbed</div></div>
+    <div class="card kpi"><div class="eyebrow">Peak month</div><div class="val num">156</div><div class="foot">Mar 2026 · pre-season</div></div>
+  </div>
+
+  <div class="card">
+    <div class="ttl"><h2>Monthly intake vs assessments</h2></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--navy-2)"></i>New registrations</span>
+      <span><i class="sw" style="background:var(--navy-5)"></i>Assessed</span>
+      <span><i class="dash"></i>Assessment capacity (70 / mo)</span>
+    </div>
+    <div class="chart">
+      <div class="capline"></div>
+      <div class="col"><div class="v num">82</div><div class="pair"><i style="height:103px"></i><i class="b" style="height:66px"></i></div></div>
+      <div class="col"><div class="v num">76</div><div class="pair"><i style="height:95px"></i><i class="b" style="height:60px"></i></div></div>
+      <div class="col"><div class="v num">94</div><div class="pair"><i style="height:118px"></i><i class="b" style="height:71px"></i></div></div>
+      <div class="col"><div class="v num">88</div><div class="pair"><i style="height:110px"></i><i class="b" style="height:64px"></i></div></div>
+      <div class="col"><div class="v num">103</div><div class="pair"><i style="height:129px"></i><i class="b" style="height:74px"></i></div></div>
+      <div class="col"><div class="v num">121</div><div class="pair"><i style="height:151px"></i><i class="b" style="height:80px"></i></div></div>
+      <div class="col"><div class="v num">156</div><div class="pair"><i style="height:196px"></i><i class="b" style="height:86px"></i></div></div>
+      <div class="col"><div class="v num">142</div><div class="pair"><i style="height:178px"></i><i class="b" style="height:84px"></i></div></div>
+      <div class="col"><div class="v num">109</div><div class="pair"><i style="height:137px"></i><i class="b" style="height:72px"></i></div></div>
+      <div class="col"><div class="v num">98</div><div class="pair"><i style="height:123px"></i><i class="b" style="height:68px"></i></div></div>
+      <div class="col"><div class="v num">126</div><div class="pair"><i style="height:158px"></i><i class="b" style="height:70px"></i></div></div>
+      <div class="col now"><div class="v num">148</div><div class="pair"><i style="height:186px"></i><i class="b" style="height:78px"></i></div></div>
+    </div>
+    <div class="xaxis"><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span class="now">Aug</span></div>
+    <p class="note">Intake has run above assessment capacity for <b style="color:var(--ink)">9 of the last 12 months</b> — the gap is what feeds the Screening backlog on the Funnel tab.</p>
+  </div>
+
+  <div class="grid g2a">
+    <div class="card">
+      <div class="sect">Source of registration</div>
+      <p class="hint" style="margin:3px 0 16px">Last 12 months · from FPO / referral fields</p>
+      <div class="stack">
+        <div class="row"><div class="name">Field agent (FPO)</div><div class="track"><div class="fill" style="width:100%;background:var(--navy)"></div></div><div class="n num">521</div></div>
+        <div class="row"><div class="name">Website form</div><div class="track"><div class="fill" style="width:63%"></div></div><div class="n num">328</div></div>
+        <div class="row"><div class="name">Crew referral</div><div class="track"><div class="fill" style="width:41%;background:var(--navy-3)"></div></div><div class="n num">214</div></div>
+        <div class="row"><div class="name">Job fair / campus</div><div class="track"><div class="fill" style="width:27%;background:var(--navy-4)"></div></div><div class="n num">142</div></div>
+        <div class="row"><div class="name">Social media</div><div class="track"><div class="fill" style="width:15%;background:var(--navy-5)"></div></div><div class="n num">79</div></div>
+      </div>
+      <p class="note">FPO channel converts to Assessed at <b class="up">21%</b> vs <b style="color:var(--ink)">9%</b> for social media.</p>
+    </div>
+    <div class="card">
+      <div class="sect">Registration by region</div>
+      <p class="hint" style="margin:3px 0 16px">Top 6 provinces of origin</p>
+      <div class="stack">
+        <div class="tile"><span>Bali</span><b class="num">268</b></div>
+        <div class="tile"><span>East Java</span><b class="num">241</b></div>
+        <div class="tile"><span>Central Java</span><b class="num">197</b></div>
+        <div class="tile"><span>West Java</span><b class="num">158</b></div>
+        <div class="tile"><span>North Sulawesi</span><b class="num">112</b></div>
+        <div class="tile"><span>Jakarta</span><b class="num">94</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PIPELINE EXITS ============ -->
+<section class="panel" id="exits" hidden>
+  <div class="grid g4">
+    <div class="card kpi alert"><div class="eyebrow">Exits 2026 YTD</div><div class="val num">183</div><div class="foot">14.3% of all registrations</div></div>
+    <div class="card kpi"><div class="eyebrow">This month</div><div class="val num">21</div><div class="foot up">−6 vs last month</div></div>
+    <div class="card kpi"><div class="eyebrow">Recoverable</div><div class="val num">64</div><div class="foot watch">Document / timing reasons</div></div>
+    <div class="card kpi"><div class="eyebrow">Heaviest exit stage</div><div class="val val sm">Screening</div><div class="foot">71 exits · 39% of total</div></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="ttl"><h2>Exit reason</h2></div>
+      <p class="hint" style="margin:6px 0 16px 13px">Grouped from the REASON field · 2026 YTD</p>
+      <div class="stack">
+        <div class="row" style="grid-template-columns:150px 1fr 34px"><div class="name">Withdrew / no response</div><div class="track" style="height:9px"><div class="fill" style="width:100%;background:var(--red)"></div></div><div class="n num">58</div></div>
+        <div class="row" style="grid-template-columns:150px 1fr 34px"><div class="name">Incomplete documents</div><div class="track" style="height:9px"><div class="fill" style="width:72%;background:var(--amber)"></div></div><div class="n num">42</div></div>
+        <div class="row" style="grid-template-columns:150px 1fr 34px"><div class="name">Failed assessment</div><div class="track" style="height:9px"><div class="fill" style="width:53%;background:var(--red);opacity:.68"></div></div><div class="n num">31</div></div>
+        <div class="row" style="grid-template-columns:150px 1fr 34px"><div class="name">Medical unfit</div><div class="track" style="height:9px"><div class="fill" style="width:36%;background:var(--muted)"></div></div><div class="n num">21</div></div>
+        <div class="row" style="grid-template-columns:150px 1fr 34px"><div class="name">Visa refused / expired</div><div class="track" style="height:9px"><div class="fill" style="width:33%;background:var(--amber);opacity:.7"></div></div><div class="n num">19</div></div>
+        <div class="row" style="grid-template-columns:150px 1fr 34px"><div class="name">Took other employment</div><div class="track" style="height:9px"><div class="fill" style="width:21%;background:var(--muted);opacity:.6"></div></div><div class="n num">12</div></div>
+      </div>
+      <p class="note"><b class="watch">Amber reasons are recoverable</b> — documents and visa timing, not candidate quality. 64 of 183 could re-enter the pool.</p>
+    </div>
+
+    <div class="card">
+      <div class="sect">Exit by last stage</div>
+      <p class="hint" style="margin:3px 0 16px">Exit count against stage population</p>
+      <div class="stack" style="gap:14px">
+        <div class="meter"><div class="head"><span>Newly Registered</span><b class="num">34 <span class="of">/ 612 · 5.6%</span></b></div><div class="track"><div class="fill" style="width:12%;opacity:.55"></div></div></div>
+        <div class="meter"><div class="head"><span>Screening</span><b class="num">71 <span class="of">/ 341 · 20.8%</span></b></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+        <div class="meter"><div class="head"><span>Ready to Assess</span><b class="num">38 <span class="of">/ 188 · 20.2%</span></b></div><div class="track"><div class="fill" style="width:54%;opacity:.8"></div></div></div>
+        <div class="meter"><div class="head"><span>Assessed</span><b class="num">27 <span class="of">/ 214 · 12.6%</span></b></div><div class="track"><div class="fill" style="width:38%;opacity:.7"></div></div></div>
+        <div class="meter"><div class="head"><span>Hotel Gap Pool</span><b class="num">13 <span class="of">/ 97 · 13.4%</span></b></div><div class="track"><div class="fill" style="width:18%;opacity:.6"></div></div></div>
+      </div>
+      <p class="note">Screening loses one in five — the same stage flagged on the Funnel tab. One fix serves both numbers.</p>
+    </div>
+  </div>
+
+  <div class="card flush">
+    <div class="thead">
+      <div class="sect">Recent exits</div>
+      <div class="chips">
+        <span class="chip on">All</span><span class="chip">Recoverable</span><span class="chip">Sea Chefs</span><span class="chip">Ambassador</span><span class="chip">Renaissance</span>
+      </div>
+      <div class="count num">183 records</div>
+    </div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>PAL ID</th><th>Name</th><th>Department</th><th>Last stage</th><th>Reason</th><th>Exit date</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="id num">PAL-04182</td><td class="nm">Andika Prasetyo</td><td>F&amp;B Service</td><td>Screening</td><td>Incomplete documents</td><td class="num" style="color:var(--muted)">14 Aug 2026</td><td><span class="pill a">Recoverable</span></td></tr>
+        <tr><td class="id num">PAL-04117</td><td class="nm">Ni Luh Ayu Wardani</td><td>Housekeeping</td><td>Ready to Assess</td><td>Took other employment</td><td class="num" style="color:var(--muted)">12 Aug 2026</td><td><span class="pill r">Closed</span></td></tr>
+        <tr><td class="id num">PAL-03998</td><td class="nm">Reynaldo Manoppo</td><td>Galley</td><td>Assessed</td><td>Visa refused / expired</td><td class="num" style="color:var(--muted)">09 Aug 2026</td><td><span class="pill a">Recoverable</span></td></tr>
+        <tr><td class="id num">PAL-03941</td><td class="nm">Siti Rahmawati</td><td>Bar</td><td>Screening</td><td>Withdrew / no response</td><td class="num" style="color:var(--muted)">07 Aug 2026</td><td><span class="pill r">Closed</span></td></tr>
+        <tr><td class="id num">PAL-03876</td><td class="nm">Bagus Hermawan</td><td>Deck / Technical</td><td>Newly Registered</td><td>Medical unfit</td><td class="num" style="color:var(--muted)">05 Aug 2026</td><td><span class="pill r">Closed</span></td></tr>
+        <tr><td class="id num">PAL-03802</td><td class="nm">Made Dwi Antara</td><td>Administration</td><td>Screening</td><td>Incomplete documents</td><td class="num" style="color:var(--muted)">02 Aug 2026</td><td><span class="pill a">Recoverable</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="tfoot">
+      <div class="info">Showing 6 of 183 · sorted by exit date</div>
+      <div style="display:flex;gap:8px"><button class="btn">Export CSV</button><button class="btn primary">Re-activate selected</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FUNNEL & CONVERSION ============ -->
+<section class="panel" id="funnel" hidden>
+  <div class="card">
+    <div class="ttl"><h2>Stage-to-stage conversion</h2></div>
+    <p class="hint">Sequential flow-through stages only. Flags: <b class="up">≥60%</b> · <b class="watch">40–59%</b> · <b class="down">&lt;40%</b>. Assessed and Hotel Gap Pool accumulate over time, so they show headcount instead of a rate.</p>
+    <div class="funnel">
+      <div class="fstep"><div class="lbl">Online Registration</div><div class="track"><div class="fill" style="width:100%;background:var(--navy-4)"></div></div><div class="n num">1,284</div></div>
+      <div class="fgate"><div></div><div class="g"><span class="pill g">47.7% conversion</span><small>672 did not progress</small></div><div></div></div>
+      <div class="fstep"><div class="lbl">Newly Registered</div><div class="track"><div class="fill" style="width:47.7%;background:var(--navy-3)"></div></div><div class="n num">612</div></div>
+      <div class="fgate"><div></div><div class="g"><span class="pill g">55.7% conversion</span><small>271 did not progress</small></div><div></div></div>
+      <div class="fstep"><div class="lbl">Screening</div><div class="track"><div class="fill" style="width:26.6%;background:#0a7abf"></div></div><div class="n num">341</div></div>
+      <div class="fgate"><div></div><div class="g"><span class="pill a">55.1% conversion</span><small>tightest gate — 153 aged &gt;30d</small></div><div></div></div>
+      <div class="fstep" style="border-bottom:1px solid var(--line-2)"><div class="lbl">Ready to Assess</div><div class="track"><div class="fill" style="width:14.6%;background:var(--navy-2)"></div></div><div class="n num">188</div></div>
+      <div class="fstep pool" style="padding-top:13px"><div class="lbl">Assessed <em>pool</em></div><div class="track"><div class="fill" style="width:16.7%;background:var(--navy)"></div></div><div class="n num">214</div></div>
+      <div class="fstep pool" style="padding-top:0"><div class="lbl">Hotel Gap Pool <em>pool</em></div><div class="track"><div class="fill" style="width:7.6%;background:var(--navy);opacity:.62"></div></div><div class="n num">97</div></div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="sect">Time in stage (median days)</div>
+      <div class="chart" style="height:150px;gap:14px">
+        <div class="col"><div class="v num">9</div><div class="pair"><i style="height:36px;background:var(--navy-4)"></i></div><div class="eyebrow" style="text-transform:none;letter-spacing:0">Online Reg</div></div>
+        <div class="col"><div class="v num">14</div><div class="pair"><i style="height:56px;background:var(--navy-3)"></i></div><div class="eyebrow" style="text-transform:none;letter-spacing:0">Newly Reg</div></div>
+        <div class="col"><div class="v num down">31</div><div class="pair"><i style="height:118px;background:var(--red)"></i></div><div class="eyebrow" style="text-transform:none;letter-spacing:0">Screening</div></div>
+        <div class="col"><div class="v num">12</div><div class="pair"><i style="height:48px;background:var(--navy-2)"></i></div><div class="eyebrow" style="text-transform:none;letter-spacing:0">Ready to Assess</div></div>
+      </div>
+      <p class="note">Screening is 2.2× the pipeline median — the clearest place to add reviewer capacity.</p>
+    </div>
+    <div class="card">
+      <div class="sect">Stage volume</div>
+      <div class="stack" style="margin-top:14px;gap:10px">
+        <div class="tile"><span>Online Registration</span><b class="num">1,284</b></div>
+        <div class="tile"><span>Newly Registered</span><b class="num">612</b></div>
+        <div class="tile"><span>Screening</span><b class="num">341</b></div>
+        <div class="tile"><span>Ready to Assess</span><b class="num">188</b></div>
+        <div class="tile on"><span>Assessed</span><b class="num">214</b></div>
+        <div class="tile on"><span>Hotel Gap Pool</span><b class="num">97</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RECRUITMENT POOL ============ -->
+<section class="panel" id="pool" hidden>
+  <div class="card">
+    <div class="thead" style="padding:0;border:0">
+      <div class="sect">Filters</div>
+      <div class="chips">
+        <span class="chip on">All stages</span><span class="chip">Assessed</span><span class="chip">Hotel Gap Pool</span><span class="chip">Screening</span><span class="chip">EAF received</span><span class="chip">Visa valid</span><span class="chip">Visa ≤ 90d</span>
+      </div>
+      <div class="count num">2,425 candidates</div>
+    </div>
+    <div class="grid" style="grid-template-columns:2fr 1fr 1fr 1fr;margin-top:14px">
+      <input class="btn" style="width:100%;color:var(--ink)" placeholder="Search name or PAL ID">
+      <select class="btn" style="width:100%"><option>All departments</option><option>F&amp;B Service</option><option>Housekeeping</option><option>Galley</option><option>Bar</option><option>Administration</option><option>Deck / Technical</option><option>Retail</option></select>
+      <select class="btn" style="width:100%"><option>All clients</option><option>Sea Chefs</option><option>Ambassador</option><option>Renaissance</option></select>
+      <select class="btn" style="width:100%"><option>Sort: date apply ↓</option><option>Sort: visa expiry ↑</option><option>Sort: assessed date ↓</option></select>
+    </div>
+  </div>
+
+  <div class="card flush">
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>PAL ID</th><th>Name</th><th>Status</th><th>Stage</th><th>Department</th><th>Suggested position</th><th>C1/D exp</th><th>Schengen exp</th><th>Experience</th><th>Date apply</th></tr></thead>
+      <tbody>
+        <tr><td class="id num" style="font:700 11.5px 'Courier New',monospace;color:var(--navy)">PAL-10482</td><td class="nm">Andi Prasetyo</td><td><span class="pill n" style="background:var(--navy-bg);color:var(--navy)">POOL</span></td><td>Assessed</td><td>F&amp;B Service</td><td>Waiter</td><td class="num">12 Mar 2028</td><td class="num">30 Nov 2027</td><td>2 contracts</td><td class="num" style="color:var(--muted)">03 Jan 2026</td></tr>
+        <tr><td class="id num" style="font:700 11.5px 'Courier New',monospace;color:var(--navy)">PAL-10344</td><td class="nm">Bagus Nugroho</td><td><span class="pill n" style="background:var(--navy-bg);color:var(--navy)">POOL</span></td><td>Assessed</td><td>Galley</td><td>Commis I</td><td class="num down" style="font-weight:700">04 Oct 2026 · 49d</td><td class="num">18 Jan 2027</td><td>1 contract</td><td class="num" style="color:var(--muted)">03 Feb 2026</td></tr>
+        <tr><td class="id num" style="font:700 11.5px 'Courier New',monospace;color:var(--navy)">PAL-10517</td><td class="nm">Siti Rahmawati</td><td><span class="pill n">GAP</span></td><td>Hotel Gap Pool</td><td>Housekeeping</td><td>Cabin Steward</td><td style="color:#9aa7b4">—</td><td style="color:#9aa7b4">—</td><td style="color:#9aa7b4">None</td><td class="num" style="color:var(--muted)">21 Feb 2026</td></tr>
+        <tr><td class="id num" style="font:700 11.5px 'Courier New',monospace;color:var(--navy)">PAL-10877</td><td class="nm">Nadia Puspita</td><td><span class="pill n" style="background:#e6f2fa;color:#0a7abf">PROC</span></td><td>Ready to Assess</td><td>Housekeeping</td><td>Cabin Steward</td><td class="num">15 May 2028</td><td class="num">02 Feb 2027</td><td>2 contracts</td><td class="num" style="color:var(--muted)">14 Apr 2026</td></tr>
+        <tr><td class="id num" style="font:700 11.5px 'Courier New',monospace;color:var(--navy)">PAL-11140</td><td class="nm">Gilang Ramadhan</td><td><span class="pill n" style="background:var(--navy-bg);color:var(--navy-4)">REG</span></td><td>Online Registration</td><td>Bar</td><td>Bar Waiter</td><td style="color:#9aa7b4">—</td><td style="color:#9aa7b4">—</td><td style="color:#9aa7b4">None</td><td class="num" style="color:var(--muted)">09 Aug 2026</td></tr>
+        <tr><td class="id num" style="font:700 11.5px 'Courier New',monospace;color:var(--navy)">PAL-10801</td><td class="nm">Putri Handayani</td><td><span class="pill n" style="background:#e6f2fa;color:#0a7abf">PROC</span></td><td>Screening</td><td>Administration</td><td>Crew Admin</td><td style="color:#9aa7b4">—</td><td style="color:#9aa7b4">—</td><td>1 contract</td><td class="num" style="color:var(--muted)">02 Mar 2026</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="tfoot">
+      <div class="info">Showing 1–6 of 2,425</div>
+      <div style="display:flex;gap:6px"><button class="btn">‹</button><button class="btn primary">1</button><button class="btn">2</button><button class="btn">3</button><button class="btn">›</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CANDIDATE BREAKDOWN ============ -->
+<section class="panel" id="breakdown" hidden>
+  <div class="grid g4">
+    <div class="card kpi"><div class="eyebrow">Departments</div><div class="val num">7</div><div class="foot">Printshop within Administration</div></div>
+    <div class="card kpi"><div class="eyebrow">With cruise experience</div><div class="val num">61%</div><div class="foot">1,479 of 2,425</div></div>
+    <div class="card kpi"><div class="eyebrow">Valid C1/D visa</div><div class="val num">812</div><div class="foot watch">41 expiring ≤ 90 days</div></div>
+    <div class="card kpi"><div class="eyebrow">EAF received</div><div class="val num">1,043</div><div class="foot">27 pending review</div></div>
+  </div>
+
+  <div class="grid g2a">
+    <div class="card">
+      <div class="ttl"><h2>Department by stage</h2></div>
+      <p class="hint" style="margin:6px 0 16px 13px">Share of each department currently sitting in each stage</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th style="background:none">Department</th><th style="background:none;text-align:right">Reg</th><th style="background:none;text-align:right">Newly</th><th style="background:none;text-align:right">Screening</th><th style="background:none;text-align:right">Ready</th><th style="background:none;text-align:right">Assessed</th><th style="background:none;text-align:right">Gap pool</th></tr></thead>
+        <tbody>
+          <tr><td>F&amp;B Service</td><td class="num" style="text-align:right">312</td><td class="num" style="text-align:right">148</td><td class="num" style="text-align:right">86</td><td class="num" style="text-align:right">47</td><td class="num" style="text-align:right;font-weight:700;color:var(--navy)">84</td><td class="num" style="text-align:right">26</td></tr>
+          <tr><td>Housekeeping</td><td class="num" style="text-align:right">274</td><td class="num" style="text-align:right">131</td><td class="num" style="text-align:right">72</td><td class="num" style="text-align:right">41</td><td class="num" style="text-align:right;font-weight:700;color:var(--navy)">64</td><td class="num" style="text-align:right">22</td></tr>
+          <tr><td>Galley</td><td class="num" style="text-align:right">231</td><td class="num" style="text-align:right">108</td><td class="num" style="text-align:right">61</td><td class="num" style="text-align:right">33</td><td class="num" style="text-align:right;font-weight:700;color:var(--navy)">52</td><td class="num" style="text-align:right">18</td></tr>
+          <tr><td>Bar</td><td class="num" style="text-align:right">168</td><td class="num" style="text-align:right">79</td><td class="num" style="text-align:right">48</td><td class="num" style="text-align:right">24</td><td class="num" style="text-align:right;font-weight:700;color:var(--navy)">38</td><td class="num" style="text-align:right">12</td></tr>
+          <tr><td>Administration</td><td class="num" style="text-align:right">124</td><td class="num" style="text-align:right">58</td><td class="num" style="text-align:right">36</td><td class="num" style="text-align:right">21</td><td class="num" style="text-align:right;font-weight:700;color:var(--navy)">28</td><td class="num" style="text-align:right">9</td></tr>
+          <tr><td>Deck / Technical</td><td class="num" style="text-align:right">106</td><td class="num" style="text-align:right">49</td><td class="num" style="text-align:right">27</td><td class="num" style="text-align:right">14</td><td class="num" style="text-align:right;font-weight:700;color:var(--navy)">22</td><td class="num" style="text-align:right">6</td></tr>
+          <tr><td>Retail</td><td class="num" style="text-align:right">69</td><td class="num" style="text-align:right">39</td><td class="num" style="text-align:right">11</td><td class="num" style="text-align:right">8</td><td class="num" style="text-align:right;font-weight:700;color:var(--navy)">23</td><td class="num" style="text-align:right">4</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <div class="sect">Cruise experience</div>
+        <div class="stack" style="margin-top:14px">
+          <div class="row"><div class="name">No experience</div><div class="track"><div class="fill" style="width:100%;background:var(--navy-5)"></div></div><div class="n num">946</div></div>
+          <div class="row"><div class="name">1 contract</div><div class="track"><div class="fill" style="width:78%;background:var(--navy-3)"></div></div><div class="n num">738</div></div>
+          <div class="row"><div class="name">2 contracts</div><div class="track"><div class="fill" style="width:49%;background:var(--navy-2)"></div></div><div class="n num">462</div></div>
+          <div class="row"><div class="name">3+ contracts</div><div class="track"><div class="fill" style="width:29%;background:var(--navy)"></div></div><div class="n num">279</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="sect">Document readiness</div>
+        <div class="stack" style="margin-top:14px;gap:10px">
+          <div class="tile"><span>EAF received</span><b class="num">1,043</b></div>
+          <div class="tile"><span>C1/D valid</span><b class="num">812</b></div>
+          <div class="tile"><span>Schengen valid</span><b class="num">604</b></div>
+          <div class="tile" style="background:var(--amber-bg)"><span>Docs incomplete</span><b class="num watch">387</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+document.querySelectorAll('.tab').forEach(function (tab) {
+  tab.addEventListener('click', function () {
+    document.querySelectorAll('.tab').forEach(function (t) { t.setAttribute('aria-selected', String(t === tab)); });
+    document.querySelectorAll('.panel').forEach(function (p) { p.hidden = p.id !== tab.dataset.panel; });
+    window.scrollTo(0, 0);
+  });
+});
+document.querySelectorAll('.chips').forEach(function (group) {
+  group.addEventListener('click', function (e) {
+    if (!e.target.classList.contains('chip')) return;
+    group.querySelectorAll('.chip').forEach(function (c) { c.classList.toggle('on', c === e.target); });
+  });
+});
+</script>
+</body>
+</html>
